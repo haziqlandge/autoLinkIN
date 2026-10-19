@@ -74,6 +74,19 @@ export function classifyCommand(cmd) {
   return null;
 }
 
+export function buildBundleContext({ projectName, root, commits, stat, cliPath, draftsDir }) {
+  const list = commits.slice(0, 30).map((c) => `- ${c.subject}`).join('\n');
+  return [
+    `autoLinkIN: ${projectName} has new commits since the last LinkedIn draft or decline:`,
+    list,
+    stat ? `(${stat})` : '',
+    'Judge whether these add up to an important feature, or enough small ones together, to be worth a LinkedIn post.',
+    'If not, say nothing about it.',
+    'If yes, once the current task is finished, ask the user in one line whether they want a LinkedIn draft; on yes use the autolinkin:lndraft skill.',
+    `If the user says no, run: node "${cliPath}" declined "${root}" --drafts-dir "${draftsDir}"`,
+  ].filter(Boolean).join('\n');
+}
+
 export function buildMilestoneContext({ projectName, root, kind, detail, cliPath, draftsDir }) {
   return [
     `autoLinkIN: ${projectName} just hit a milestone (${kind}: ${detail}).`,
