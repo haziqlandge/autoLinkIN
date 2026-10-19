@@ -92,7 +92,52 @@ export function checkDraft({ post = '', comment = '' } = {}) {
     if (hits.length >= 3) warns.push(`AI vocabulary: "${hits.join('", "')}" in one paragraph`);
   }
   warns.push(...aiTells(post, paragraphs));
-  return { fails, warns };
+  return { fails, warns, checks: humanChecks(fails, warns) };
+}
+
+// The same results in plain words, one row per thing a reader would notice.
+const CHECK_GROUPS = [
+  { id: 'voice', label: 'Reads like you, not like AI', pass: 'No AI clichés or buzzword pile-ups', rules: [
+    [/blocklisted phrase/, 'Uses a phrase people associate with AI posts'],
+    [/AI vocabulary/, 'Leans on buzzwords'],
+    [/reveal bridge/, 'Uses a cliché reveal line'],
+    [/staccato/, 'Too many very short sentences in a row'],
+    [/triad/, 'Stacks several lists of three, which can sound robotic'],
+    [/not X/, 'Repeats the "it\'s not X, it\'s Y" pattern'],
+  ] },
+  { id: 'hook', label: 'Hook lands before "… more"', pass: 'The opening line shows in full', rules: [
+    [/hook: first line/, 'The opening line gets cut off by "… more"'],
+    [/hook: opens with a question/, 'Opens with a question instead of a statement'],
+  ] },
+  { id: 'punctuation', label: 'Clean punctuation', pass: 'No long dashes', rules: [[/banned dash/, 'Has long dashes']] },
+  { id: 'caps', label: 'Proper capital letters', pass: 'Capitals where they belong', rules: [[/lowercase/, 'Has a lowercase "i"']] },
+  { id: 'language', label: 'Keeps it professional', pass: 'No swearing', rules: [[/swearing/, 'Has swearing']] },
+  { id: 'emoji', label: 'Emoji kept in check', pass: 'No emoji', rules: [
+    [/emoji: \d+ across/, 'Too many emoji'],
+    [/emoji: \d+ present/, 'Has emoji, make sure each one earns its place'],
+  ] },
+  { id: 'hashtags', label: 'Hashtags in the right amount and place', pass: 'Hashtags look right', rules: [
+    [/hashtags: \d+/, 'Too many hashtags'],
+    [/hashtags belong/, 'Hashtags sit in the middle of the post'],
+  ] },
+  { id: 'length', label: 'Fits LinkedIn\'s length limits', pass: 'Within limits', rules: [
+    [/^post: \d+ characters/, 'The post is too long'],
+    [/^comment: \d+ characters/, 'The first comment is too long'],
+  ] },
+];
+
+export function humanChecks(fails, warns) {
+  return CHECK_GROUPS.map(({ id, label, pass, rules }) => {
+    const notes = [];
+    let status = 'pass';
+    for (const [re, text] of rules) {
+      if (fails.some((m) => re.test(m))) { status = 'fail'; notes.push(text); } else if (warns.some((m) => re.test(m))) {
+        if (status === 'pass') status = 'warn';
+        notes.push(text);
+      }
+    }
+    return { id, label, status, note: notes.length ? notes.join('. ') : pass };
+  });
 }
 
 export const REVEAL_BRIDGES = ['the result?', 'the best part?', "here's why", "here's how", 'the kicker', "but here's"];

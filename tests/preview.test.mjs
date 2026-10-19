@@ -47,31 +47,51 @@ test('matches the LinkedIn feed card layout', () => {
   assert.ok(!/<\/script>/i.test(JSON.stringify(renderPreview({ post: '</script><b>x', comment: '' }).match(/id="post-data">([\s\S]*?)<\/script>/)[1])));
 });
 
-test('shows generated insights from the brief and checks under the card', () => {
+test('dashboard shows account tiles, projection, analysis and plain checks', () => {
   const h = renderPreview({
-    post: 'I shipped it.', comment: '', insights: { brief: '# Title\n\n## Audience and why\nDevs <b>\n- one\n- two', checks: 'WARN: hook: something' },
+    post: 'I shipped it.', comment: '',
+    insights: {
+      account: { sample: true, followers: 1240, connections: 860, recentPosts: [{ impressions: 900, reactions: 30, comments: 6 }] },
+      analysis: 'Strong hook. <b>Add</b> an image.',
+      checks: [{ id: 'voice', label: 'Reads like you, not like AI', status: 'pass', note: 'No AI clichés' },
+        { id: 'hook', label: 'Hook lands before more', status: 'warn', note: 'Opens with a question' }],
+      signals: { score: 72, helping: ['Has an image'], holding: ['No question at the end'] },
+      estimate: { basis: 'impressions', low: 500, high: 1200, reactions: { low: 10, high: 40 } },
+    },
   });
-  assert.match(h, /class="insights"/);
-  assert.match(h, /<h3>Audience and why<\/h3>/);
-  assert.match(h, /<li>one<\/li><li>two<\/li>/);
-  assert.match(h, /Devs &lt;b&gt;/);
-  assert.match(h, /class="check warn"[^>]*>WARN: hook: something/);
-  assert.doesNotMatch(renderPreview({ post: 'x', comment: '' }), /class="insights"/);
+  assert.match(h, /class="dash"/);
+  assert.match(h, /1,240/);
+  assert.match(h, /Sample data/);
+  assert.match(h, /500[\s\S]*1,200/);
+  assert.match(h, /72/);
+  assert.match(h, /Strong hook\. &lt;b&gt;Add&lt;\/b&gt; an image\./);
+  assert.match(h, /Reads like you, not like AI/);
+  assert.match(h, /1 of 2 checks passed/);
+  assert.match(h, /No question at the end/);
+  assert.doesNotMatch(h, /npm|\d+ tests/i);
 });
 
-test('cli preview writes preview.html from the draft folder', () => {
-  const dir = tmpDir();
-  mkdirSync(join(dir, 'media'));
+test('without account stats the dashboard says how to add them', () => {
+  const h = renderPreview({ post: 'x', comment: '', insights: { checks: [], signals: { score: 40, helping: [], holding: [] }, estimate: null } });
+  assert.match(h, /class="dash"/);
+  assert.match(h, /No account stats yet/);
+});
+
+test('cli preview writes preview.html with the dashboard from the draft folder', () => {
+  const root = tmpDir();
+  const dir = join(root, '2026-01-01-demo-launch');
+  mkdirSync(join(dir, 'media'), { recursive: true });
   writeFileSync(join(dir, 'media', 'a.png'), '');
   writeFileSync(join(dir, 'post.md'), 'I shipped it.');
   writeFileSync(join(dir, 'first-comment.md'), 'Repo: x');
-  writeFileSync(join(dir, 'brief.md'), '## Audience and why\nDevs who build in public.');
-  writeFileSync(join(dir, 'checks.txt'), 'PASS: no problems found\n');
+  writeFileSync(join(dir, 'analysis.md'), 'A short, honest launch post.');
+  writeFileSync(join(root, 'account.json'), JSON.stringify({ sample: true, followers: 321, connections: 45, recentPosts: [] }));
   const res = spawnSync(process.execPath, [CLI, 'preview', dir, '--name', 'Test Person'], { encoding: 'utf8' });
   assert.equal(res.status, 0);
   const html = readFileSync(join(dir, 'preview.html'), 'utf8');
   assert.match(html, /I shipped it\./);
   assert.match(html, /media\/a\.png/);
-  assert.match(html, /Devs who build in public\./);
-  assert.match(html, /PASS: no problems found/);
+  assert.match(html, /A short, honest launch post\./);
+  assert.match(html, /321/);
+  assert.match(html, /Hook lands before/);
 });

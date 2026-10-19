@@ -8,7 +8,7 @@ A Claude Code plugin that turns work you actually shipped into LinkedIn drafts y
 - Writes the draft in your own voice, from the writing-style files you point it at. It checks the draft against hard rules: no em dashes, at most 5 emoji, at most 5 hashtags, and LinkedIn's length limits.
 - Picks the audience per project and says why.
 - Tells you whether a video would help and why. You decide.
-- Shows a LinkedIn-style feed-card preview.
+- Shows a LinkedIn-style feed-card preview next to an insights dashboard. The dashboard covers your account's numbers, an expected reach for the post, what's helping or holding it back, a short written analysis, and plain-language checks.
 - Fills the LinkedIn composer in the Claude desktop app's browser panel and stops. You press Post.
 - Learns from your edits into its own voice notes, and asks before anything touches the writing-style files you protect.
 
@@ -32,6 +32,7 @@ Then set the options with `/plugin configure autolinkin@autolinkin` in Claude Co
 | `protected_paths` | Files or folders that need your approval, with the change shown, before anything edits them. |
 | `display_name` | Name shown on the preview card. |
 | `headline` | Headline shown on the preview card. |
+| `stats_profile` | Your main LinkedIn profile URL. Its followers, connections and recent posts feed the preview's insights dashboard. |
 
 Start a new session after installing so the hooks load.
 

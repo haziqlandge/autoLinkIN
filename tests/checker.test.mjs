@@ -5,7 +5,8 @@ import { checkDraft, countEmoji, countHashtags } from '../scripts/lib/checker.mj
 const ok = 'I shipped v2 of the Packet Tracer MCP after 41 commits.\n\nIt builds labs from plain English.';
 
 test('clean post passes with no warnings', () => {
-  assert.deepEqual(checkDraft({ post: ok, comment: '' }), { fails: [], warns: [] });
+  const { fails, warns } = checkDraft({ post: ok, comment: '' });
+  assert.deepEqual({ fails, warns }, { fails: [], warns: [] });
 });
 
 test('dashes', () => {

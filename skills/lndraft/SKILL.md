@@ -49,13 +49,35 @@ Turn what the user shipped into a LinkedIn draft they review before anything goe
 
    If they say yes, follow the `lnvid` skill now or later. There is no default length, ratio or style.
 8. **Media.** Take the screenshots the post needs from the real app and save them in `<dir>/media/`. Generate images with the INSPI MCP tools if they are available. If they are not, say so and carry on.
-9. **Preview.** Run `preview <dir>`, then show the printed `preview.html` path in the side panel with SendUserFile (display: render). The page shows `checks.txt` and `brief.md` as an Insights panel under the card, so keep `brief.md` current: update it after every revision. Tell the user they can edit `post.md` directly or reply with changes.
-10. **Revise.** After every change, run `check` and `preview` again.
-11. **Approve and post.** On an explicit approval:
+9. **Account stats.** If `${user_config.drafts_dir}/account.json` is missing, more than 7 days old, or marked `"sample": true`, refresh it from `${user_config.stats_profile}` with the built-in browser tools:
+   - On the profile, read the follower and connection counts.
+   - On its recent-activity page, read the latest 5 to 10 posts: reactions, comments and reposts.
+   - When the signed-in account is that same profile, also read impressions from each post's analytics page (`/analytics/post-summary/<urn>/`). Impressions are only visible to the owner.
+
+   Write the file in this shape, with only numbers you actually read:
+
+   ```json
+   { "sample": false, "source": "linkedin.com/in/<name>", "capturedAt": "<ISO time>",
+     "followers": 0, "connections": 0,
+     "recentPosts": [{ "label": "<short topic>", "impressions": 0, "reactions": 0, "comments": 0, "reposts": 0 }] }
+   ```
+
+   Leave out `impressions` when you could not read them. If `stats_profile` is not set, skip this step; the preview will say there are no stats yet.
+10. **Analysis.** Write `analysis.md` in `<dir>`: two or three short paragraphs in plain words. Cover what will make this post work, its weakest spot, and one concrete change that would likely help. No jargon and no internal details (tests, tools, rule names).
+11. **Preview.** Run `preview <dir>`, then show the printed `preview.html` path in the side panel with SendUserFile (display: render). Beside the post card it shows an Insights dashboard, built from:
+    - account stats
+    - an expected-reach estimate
+    - a content score with what is helping and what is holding the post back
+    - `analysis.md`
+    - plain-language checks
+
+    Tell the user they can edit `post.md` directly or reply with changes.
+12. **Revise.** After every change, run `check` and `preview` again, and update `analysis.md` when the change affects it.
+13. **Approve and post.** On an explicit approval:
     1. Run `status <id> approved`.
     2. Fill the composer on the account signed in to the browser panel, following `composer.md`. Stop before Post.
     3. When the user says it is posted, fill the first comment and stop before Comment.
     4. Run `status <id> posted <postUrl>`, then `drafted <root>`.
-12. **Learn.** Compare `post.original.md` with the final text: `post.md`, or the published post read back from LinkedIn if the user edited it in the composer. Turn each real difference into a short dated rule in `linkedin-voice.md`. Merge and prune old rules so the file stays short.
+14. **Learn.** Compare `post.original.md` with the final text: `post.md`, or the published post read back from LinkedIn if the user edited it in the composer. Turn each real difference into a short dated rule in `linkedin-voice.md`. Merge and prune old rules so the file stays short.
 
 If the user turns down a draft that a hook offered, run `declined <root>` so the same work is not offered again.

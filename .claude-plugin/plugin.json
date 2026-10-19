@@ -35,6 +35,11 @@
       "type": "string",
       "title": "Headline on preview card",
       "description": "Shown under the name on the preview"
+    },
+    "stats_profile": {
+      "type": "string",
+      "title": "Profile for account stats",
+      "description": "Your main LinkedIn profile URL (for example https://www.linkedin.com/in/your-name/). Its followers, connections and recent posts feed the preview's insights"
     }
   }
 }
