@@ -1,8 +1,11 @@
 # Personal data: drafts, history, learned voice, state
 linkedin-drafts/
 
-# Markdown stays local, except the plan and handoffs
+# Markdown stays local, except the plan, handoffs, plugin skills and README
 *.md
+!/README.md
+!skills/**/SKILL.md
+!skills/**/references/*.md
 !docs/superpowers/plans/*.md
 !**/*handoff*.md
 !**/*hand-off*.md

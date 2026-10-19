@@ -20,6 +20,7 @@
 - LinkedIn limits: post 3000 chars, comment 1250 chars. Emoji: hard cap 5 across post and comment, default 0. Hashtags: default 3, max 5. Fold: about 210 chars.
 - Banned dashes: U+2012, U+2013, U+2014, U+2015. A plain hyphen `-` is fine.
 - Public repo: no personal data and no machine paths in committed files. Personal data lives in the git-ignored `linkedin-drafts/`.
+- Markdown is git-ignored except `/README.md`, `skills/**/SKILL.md`, `skills/**/references/*.md`, the plan and handoff files. Anything the plugin needs at runtime must be one of those or not be markdown.
 - Never click Post, Comment, Save or any other submit control on LinkedIn.
 - Commits go through the `commitskill` skill: the owner's identity, no AI attribution or co-author trailers anywhere.
 
@@ -53,7 +54,6 @@ scripts/hooks/post-tool-use.mjs   milestone hook
 scripts/hooks/stop.mjs            end-of-turn check
 scripts/hooks/pre-tool-use.mjs    protection guard
 scripts/cli.mjs                   CLI the skills call
-templates/linkedin-voice.template.md
 skills/lndraft/SKILL.md
 skills/lndraft/references/voice-rules.md
 skills/lndraft/references/composer.md
@@ -471,7 +471,7 @@ test('hook asks with the change, ignores others, silent without config', () => {
 
 | command | effect | exit |
 |---|---|---|
-| `new <projectRoot> <title>` | `createDraft` and copy `templates/linkedin-voice.template.md` to `<drafts>/linkedin-voice.md` if missing; prints `{id, dir}` | 0 |
+| `new <projectRoot> <title>` | `createDraft` and write `VOICE_TEMPLATE` to `<drafts>/linkedin-voice.md` if missing; prints `{id, dir}` | 0 |
 | `check <draftDir>` | `checkDraft` on `post.md` + `first-comment.md`, writes `checks.txt`, prints it | 1 if fails |
 | `preview <draftDir>` | writes `preview.html` (Task 9), prints its path | 0 |
 | `status <id> <status> [postUrl]` | `setStatus` | 0 |
@@ -509,7 +509,7 @@ test('declined moves sinceSha so the stop hook only shows newer work', () => {
 (`cli(args)` is a small helper in this test file around `spawnSync('node', ['scripts/cli.mjs', ...args])`.)
 
 - [ ] **Step 2: Run** `npm test`. Expected: FAIL.
-- [ ] **Step 3: Implement** `drafts.mjs`, `cli.mjs` and `templates/linkedin-voice.template.md`. The template has a title and empty "Rules learned from edits" and "Phrases to avoid" sections, plus one line saying entries are dated and pruned.
+- [ ] **Step 3: Implement** `drafts.mjs` and `cli.mjs`. Export `VOICE_TEMPLATE` from `drafts.mjs`: a string constant with a title, empty "Rules learned from edits" and "Phrases to avoid" sections, and one line saying entries are dated and pruned. It lives in code because markdown files outside the tracked set never reach the repo.
 - [ ] **Step 4: Run** `npm test`. Expected: all pass. The `preview` command can be stubbed until Task 9.
 - [ ] **Step 5: Commit** with commitskill: "Add draft store and CLI".
 
