@@ -47,15 +47,31 @@ test('matches the LinkedIn feed card layout', () => {
   assert.ok(!/<\/script>/i.test(JSON.stringify(renderPreview({ post: '</script><b>x', comment: '' }).match(/id="post-data">([\s\S]*?)<\/script>/)[1])));
 });
 
+test('shows generated insights from the brief and checks under the card', () => {
+  const h = renderPreview({
+    post: 'I shipped it.', comment: '', insights: { brief: '# Title\n\n## Audience and why\nDevs <b>\n- one\n- two', checks: 'WARN: hook: something' },
+  });
+  assert.match(h, /class="insights"/);
+  assert.match(h, /<h3>Audience and why<\/h3>/);
+  assert.match(h, /<li>one<\/li><li>two<\/li>/);
+  assert.match(h, /Devs &lt;b&gt;/);
+  assert.match(h, /class="check warn"[^>]*>WARN: hook: something/);
+  assert.doesNotMatch(renderPreview({ post: 'x', comment: '' }), /class="insights"/);
+});
+
 test('cli preview writes preview.html from the draft folder', () => {
   const dir = tmpDir();
   mkdirSync(join(dir, 'media'));
   writeFileSync(join(dir, 'media', 'a.png'), '');
   writeFileSync(join(dir, 'post.md'), 'I shipped it.');
   writeFileSync(join(dir, 'first-comment.md'), 'Repo: x');
+  writeFileSync(join(dir, 'brief.md'), '## Audience and why\nDevs who build in public.');
+  writeFileSync(join(dir, 'checks.txt'), 'PASS: no problems found\n');
   const res = spawnSync(process.execPath, [CLI, 'preview', dir, '--name', 'Test Person'], { encoding: 'utf8' });
   assert.equal(res.status, 0);
   const html = readFileSync(join(dir, 'preview.html'), 'utf8');
   assert.match(html, /I shipped it\./);
   assert.match(html, /media\/a\.png/);
+  assert.match(html, /Devs who build in public\./);
+  assert.match(html, /PASS: no problems found/);
 });

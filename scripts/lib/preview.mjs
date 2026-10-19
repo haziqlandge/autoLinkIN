@@ -97,7 +97,55 @@ const STYLE = `
   .c-text { margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
   .c-acts { display: flex; gap: 16px; margin-top: 6px; color: var(--icon); }
   .meta { margin: 8px 4px 24px; font-size: 12px; color: var(--muted); }
+  .insights { margin-top: 16px; padding: 16px; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+  .insights h2 { margin: 0 0 8px; font-size: 16px; line-height: 20px; }
+  .insights h3 { margin: 16px 0 4px; font-size: 14px; line-height: 20px; }
+  .insights p { margin: 4px 0; } .insights ul, .insights ol { margin: 4px 0; padding-left: 20px; }
+  .insights code { padding: 0 3px; border-radius: 3px; background: #f3f2ef; font-size: 13px; }
+  .checks { display: grid; gap: 4px; }
+  .check { padding: 4px 8px; border-radius: 4px; font-size: 13px; }
+  .check.pass { background: #e6f4ea; color: #05652e; } .check.warn { background: #fdf3dc; color: #7a4a00; } .check.fail { background: #fde7e9; color: #b3101f; }
 `;
+
+function inline(text) {
+  return esc(text)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+}
+
+// brief.md to HTML: ## headings, - and 1. lists, paragraphs. The # title is skipped.
+function briefHtml(md) {
+  const out = [];
+  let list = null;
+  const close = () => { if (list) { out.push(`<${list.tag}>${list.items.join('')}</${list.tag}>`); list = null; } };
+  for (const raw of md.split(/\r?\n/)) {
+    const line = raw.trim();
+    const bullet = line.match(/^[-*]\s+(.*)$/);
+    const numbered = line.match(/^\d+\.\s+(.*)$/);
+    if (bullet || numbered) {
+      const tag = bullet ? 'ul' : 'ol';
+      if (list && list.tag !== tag) close();
+      if (!list) list = { tag, items: [] };
+      list.items.push(`<li>${inline((bullet || numbered)[1])}</li>`);
+      continue;
+    }
+    close();
+    if (!line || /^#\s/.test(line)) continue;
+    const heading = line.match(/^#{2,6}\s+(.*)$/);
+    out.push(heading ? `<h3>${inline(heading[1])}</h3>` : `<p>${inline(line)}</p>`);
+  }
+  close();
+  return out.join('\n');
+}
+
+function insightsHtml({ brief = '', checks = '' } = {}) {
+  if (!brief.trim() && !checks.trim()) return '';
+  const checkLines = checks.split(/\r?\n/).filter((l) => l.trim()).map((l) => {
+    const kind = /^FAIL/.test(l) ? 'fail' : /^WARN/.test(l) ? 'warn' : 'pass';
+    return `<div class="check ${kind}">${esc(l)}</div>`;
+  }).join('');
+  return `<section class="insights"><h2>Insights</h2>${checkLines ? `<div class="checks">${checkLines}</div>` : ''}${briefHtml(brief)}</section>`;
+}
 
 // The feed shows exactly three rendered lines (blank lines count) and then
 // "… more". The server-side fold is a character estimate; this script re-cuts
@@ -125,7 +173,7 @@ const FIT_SCRIPT = String.raw`(() => {
   if (at) at.textContent = String(n || lo);
 })();`;
 
-export function renderPreview({ post = '', comment = '', media = [], displayName = '', headline = '' }) {
+export function renderPreview({ post = '', comment = '', media = [], displayName = '', headline = '', insights = {} }) {
   const name = displayName || 'You';
   const initial = esc(Array.from(name.trim())[0] || 'Y');
   const cut = foldIndex(post);
@@ -175,6 +223,7 @@ export function renderPreview({ post = '', comment = '', media = [], displayName
   ${commentBlock ? '' : '<div style="height:12px"></div>'}
 </div>
 <div class="meta">${chars} / ${POST_LIMIT} characters. The feed cuts to "\u2026 more" at character <span id="fold-at">${cut}</span>.</div>
+${insightsHtml(insights)}
 </div>
 <script type="application/json" id="post-data">${JSON.stringify({ text: post }).replace(/</g, '\\u003c')}</script>
 <script>${FIT_SCRIPT}</script>
@@ -195,6 +244,7 @@ export function writePreview(draftDir, { displayName = '', headline = '' } = {})
     media,
     displayName,
     headline,
+    insights: { brief: readText(join(draftDir, 'brief.md')), checks: readText(join(draftDir, 'checks.txt')) },
   });
   const out = join(draftDir, 'preview.html');
   writeFileSync(out, html);

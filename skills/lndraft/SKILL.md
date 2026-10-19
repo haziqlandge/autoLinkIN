@@ -49,7 +49,7 @@ Turn what the user shipped into a LinkedIn draft they review before anything goe
 
    If they say yes, follow the `lnvid` skill now or later. There is no default length, ratio or style.
 8. **Media.** Take the screenshots the post needs from the real app and save them in `<dir>/media/`. Generate images with the INSPI MCP tools if they are available. If they are not, say so and carry on.
-9. **Preview.** Run `preview <dir>`, then show the printed `preview.html` path in the side panel with SendUserFile (display: render). Tell the user they can edit `post.md` directly or reply with changes.
+9. **Preview.** Run `preview <dir>`, then show the printed `preview.html` path in the side panel with SendUserFile (display: render). The page shows `checks.txt` and `brief.md` as an Insights panel under the card, so keep `brief.md` current: update it after every revision. Tell the user they can edit `post.md` directly or reply with changes.
 10. **Revise.** After every change, run `check` and `preview` again.
 11. **Approve and post.** On an explicit approval:
     1. Run `status <id> approved`.
