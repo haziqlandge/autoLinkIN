@@ -27,8 +27,24 @@ test('renders escaped text, media and comment', () => {
   assert.match(h, /<img[^>]+media\/shot\.png/);
   assert.match(h, /<video[^>]+media\/demo\.mp4/);
   assert.match(h, /link here/);
-  assert.match(h, /see more/);
   assert.match(h, /Test Person/);
+});
+
+test('matches the LinkedIn feed card layout', () => {
+  const h = renderPreview({
+    post: `${'word '.repeat(80)}\n\nTry it #ClaudeCode #DevTools`, comment: 'Repo link', media: [], displayName: 'Test Person', headline: 'Builder',
+  });
+  assert.match(h, /• You/);
+  assert.match(h, /<span class="dots">…<\/span><button class="more"[^>]*>more<\/button>/);
+  assert.match(h, /<a class="hashtag"[^>]*>#ClaudeCode<\/a>/);
+  for (const label of ['Like', 'Comment', 'Repost', 'Send']) assert.match(h, new RegExp(`aria-label="${label}"`));
+  assert.match(h, /Add a comment/);
+  assert.match(h, /Most relevant/);
+  assert.match(h, /#f4f2ee/i);
+  // The full text travels as JSON so the page can re-cut at exactly three rendered lines.
+  const data = JSON.parse(h.match(/<script type="application\/json" id="post-data">([\s\S]*?)<\/script>/)[1]);
+  assert.match(data.text, /#ClaudeCode/);
+  assert.ok(!/<\/script>/i.test(JSON.stringify(renderPreview({ post: '</script><b>x', comment: '' }).match(/id="post-data">([\s\S]*?)<\/script>/)[1])));
 });
 
 test('cli preview writes preview.html from the draft folder', () => {

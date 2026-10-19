@@ -11,6 +11,7 @@ linkedin-drafts/
 !**/*hand-off*.md
 !**/handoffs/**/*.md
 
+.claude/
 node_modules/
 .DS_Store
 Thumbs.db
