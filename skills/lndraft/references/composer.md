@@ -15,14 +15,15 @@ Keep this list current when LinkedIn changes. Everything else derives from it.
 ## Steps
 
 1. Find the LinkedIn tab with `tabs_context`. If the pane is hidden, ask the user to bring it back (Ctrl+Shift+B). If no LinkedIn tab is signed in, ask the user to sign in themselves.
-2. On `/feed/`, click "Start a post". Wait about 2 seconds for the dialog.
-3. **Click inside the text box before typing.** Typing straight after opening the dialog can land nowhere.
-4. Type `post.md` one line at a time:
+2. **Check the account.** Read the signed-in name from the feed's profile card. If it is not the configured `display_name`, stop and ask the user whether to fill the composer on that account anyway. Drafts go to the account the user chose, never to a surprise one.
+3. On `/feed/`, click "Start a post". Wait about 2 seconds for the dialog.
+4. **Click inside the text box before typing.** Typing straight after opening the dialog can land nowhere.
+5. Type `post.md` one line at a time:
    - press Shift+Enter between lines inside a paragraph
    - press Enter twice for a blank line between paragraphs
-5. Check the text landed: read `document.activeElement.innerText`, or `get_page_text`. A screenshot taken straight after typing can be stale and show the empty placeholder.
-6. **Media: the browser tools cannot drive the native file picker,** so media is not attached automatically. Tell the user exactly which files to drag into the composer from the draft's `media/` folder, in order.
-7. Stop. Tell the user the composer is filled and that they press Post when they are happy. They can still edit the text in the composer.
+6. Check the text landed: read `document.activeElement.innerText`, or `get_page_text`. A screenshot taken straight after typing can be stale and show the empty placeholder.
+7. **Media: the browser tools cannot drive the native file picker,** so media is not attached automatically. Tell the user exactly which files to drag into the composer from the draft's `media/` folder, in order.
+8. Stop. Tell the user the composer is filled and that they press Post when they are happy. They can still edit the text in the composer.
 
 ## After the user says it is posted
 

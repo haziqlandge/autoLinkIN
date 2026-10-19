@@ -19,9 +19,14 @@ await runSafely(async () => {
   const root = repoRoot(input.cwd || process.cwd());
   if (!root) return;
   const head = headSha(root);
-  if (!head) return;
   const project = getProject(draftsDir, root);
-  if (project.lastSeenSha === head) return;
+  // First sight: work that predates autoLinkIN is not "just shipped". A repo
+  // with no commits yet starts from the beginning; one with history starts at HEAD.
+  if (!project.baselined && project.sinceSha === null) {
+    updateProject(draftsDir, root, head ? { baselined: true, sinceSha: head, lastSeenSha: head } : { baselined: true });
+    return;
+  }
+  if (!head || project.lastSeenSha === head) return;
   if (!checkEligibility(root, { draftsDir }).eligible) return;
 
   const commits = commitsSince(root, project.sinceSha);

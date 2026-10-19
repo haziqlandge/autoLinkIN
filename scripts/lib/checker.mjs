@@ -86,9 +86,38 @@ export function checkDraft({ post = '', comment = '' } = {}) {
   if (Array.from(firstLine).length > FOLD_CHARS) warns.push(`hook: first line runs past the ${FOLD_CHARS}-character fold`);
   if (firstLine.endsWith('?')) warns.push('hook: opens with a question; lead with a concrete line instead');
 
-  for (const para of post.split(/\r?\n\s*\r?\n/)) {
+  const paragraphs = post.split(/\r?\n\s*\r?\n/).filter((p) => p.trim());
+  for (const para of paragraphs) {
     const hits = wordsIn(para, DENSITY_WORDS);
     if (hits.length >= 3) warns.push(`AI vocabulary: "${hits.join('", "')}" in one paragraph`);
   }
+  warns.push(...aiTells(post, paragraphs));
   return { fails, warns };
+}
+
+export const REVEAL_BRIDGES = ['the result?', 'the best part?', "here's why", "here's how", 'the kicker', "but here's"];
+
+const TRIAD = /\b[\w'-]+(?:\s[\w'-]+){0,4},\s[\w'-]+(?:\s[\w'-]+){0,4},?\s(?:and|or)\s[\w'-]+/gi;
+const NOT_X = /\b(?:it'?s|it is|this is|that'?s)\s+not\b[^.!?\n]{1,60}?,\s*(?:it'?s|it is|but|just)\b/gi;
+
+function aiTells(post, paragraphs) {
+  const warns = [];
+  const lower = normalise(post);
+  const bridges = REVEAL_BRIDGES.filter((b) => lower.includes(b));
+  if (bridges.length) warns.push(`reveal bridge (${bridges.join(', ')}); say the thing directly`);
+
+  const sentences = post.split(/(?<=[.!?])\s+|\r?\n+/).map((s) => s.trim()).filter((s) => s && !s.startsWith('#'));
+  let run = 0;
+  for (const s of sentences) {
+    run = s.split(/\s+/).length <= 3 ? run + 1 : 0;
+    if (run >= 3) { warns.push('staccato: three or more very short sentences in a row'); break; }
+  }
+
+  const triads = (normalise(post).match(TRIAD) || []).length;
+  if (triads > 1) warns.push(`triad: ${triads} lists of three; keep at most one`);
+  const contrasts = (normalise(post).match(NOT_X) || []).length;
+  if (contrasts > 1) warns.push(`not X, it's Y: ${contrasts} contrasts; keep at most one`);
+
+  if (paragraphs.slice(0, -1).some((p) => countHashtags(p) > 0)) warns.push('hashtags belong at the end of the post');
+  return warns;
 }

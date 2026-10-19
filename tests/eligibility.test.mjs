@@ -30,6 +30,20 @@ test('rules: no remote, nda, private, opt-in, cache', () => {
   assert.deepEqual(checkEligibility(r, { draftsDir: d, ghVisibility: gh }), { eligible: true, reason: 'opt-in' });
 });
 
+test('a GitHub origin whose visibility cannot be confirmed is not eligible unless opted in', () => {
+  const d = tmpDir();
+  const r = makeRepo();
+  commit(r, 'x');
+  execFileSync('git', ['-C', r, 'remote', 'add', 'origin', 'git@github.com:a/secret.git']);
+  let calls = 0;
+  const gh = () => { calls++; return null; };
+  assert.deepEqual(checkEligibility(r, { draftsDir: d, ghVisibility: gh }), { eligible: false, reason: 'unknown' });
+  checkEligibility(r, { draftsDir: d, ghVisibility: gh });
+  assert.equal(calls, 2); // an unknown answer is never cached
+  writeFileSync(join(r, '.autolinkin'), '{"optIn":true}');
+  assert.equal(checkEligibility(r, { draftsDir: d, ghVisibility: gh }).eligible, true);
+});
+
 test('invalid .autolinkin reads as empty', () => {
   const r = makeRepo();
   writeFileSync(join(r, '.autolinkin'), 'nope');

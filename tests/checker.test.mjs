@@ -42,6 +42,16 @@ test('lowercase i', () => {
   }
 });
 
+test('warns on the other AI tells from the spec', () => {
+  const w = (p) => checkDraft({ post: p, comment: '' }).warns.join(' | ');
+  assert.match(w(`${ok}\n\nThe result? It worked.`), /reveal/);
+  assert.match(w(`${ok}\n\nFast. Simple. Done. Shipped.`), /staccato/);
+  assert.match(w(`${ok}\n\nIt's not a tool, it's a habit. It's not code, it's craft.`), /not X/);
+  assert.match(w(`${ok}\n\nIt reads logs, finds bugs and fixes them. It plans, builds and ships.`), /triad/);
+  assert.match(w('#Launch I shipped it today.\n\nMore text here.'), /hashtag/);
+  assert.deepEqual(checkDraft({ post: `${ok}\n\nIt reads logs, finds bugs and fixes them.\n\n#a #b #c`, comment: '' }).warns, []);
+});
+
 test('blocklist, swears, warnings', () => {
   assert.ok(checkDraft({ post: 'Excited to announce v2', comment: '' }).fails.length);
   assert.ok(checkDraft({ post: 'This shit works', comment: '' }).fails.length);

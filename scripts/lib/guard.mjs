@@ -20,7 +20,21 @@ export function isProtectedPath(p, protectedPaths) {
   });
 }
 
-const WRITE_TOKENS = /(^|[^-=])>>?|\bsed\s+(-[a-z]*i|--in-place)|\btee\b|\bset-content\b|\badd-content\b|\bout-file\b|\b(mv|cp|rm|move-item|copy-item|remove-item|rename-item|new-item|del|erase|ren)\b/i;
+// Anything that can create, change or delete a file from a shell command line.
+const WRITE_TOKENS = new RegExp([
+  String.raw`(^|[^-=])>>?`,
+  String.raw`\bsed\s+(-[a-z]*i|--in-place)`,
+  String.raw`\b(tee|tee-object)\b`,
+  String.raw`\b(set-content|add-content|clear-content|out-file|sc|ac|clc)\b`,
+  String.raw`\b(mv|cp|rm|copy|xcopy|robocopy|move|del|erase|ren|move-item|copy-item|remove-item|rename-item|new-item|mi|cpi|ri)\b`,
+  String.raw`\b(write|append)all(text|lines|bytes)\b`,
+  String.raw`\bwritefile(sync)?\b`,
+  String.raw`\bopen\s*\([^)]*['"][wax]\+?b?['"]`,
+  String.raw`\bcurl\b[^|;&]*\s(-o|--output)\b`,
+  String.raw`\bwget\b`,
+  String.raw`-outfile\b`,
+  String.raw`\bgit\b[^|;&]*\b(checkout|restore|reset|apply|stash|clean|mv|rm|am|pull|merge)\b`,
+].join('|'), 'i');
 
 function escapeRe(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -34,17 +48,30 @@ function commandForms(base) {
   return forms;
 }
 
-export function shellWritesTo(cmd, protectedPaths) {
+const END = String.raw`(?=$|[/\s"'\x60;|&)])`;
+
+function mentions(text, base) {
+  if (commandForms(base).some((form) => new RegExp(`${escapeRe(WIN ? form.toLowerCase() : form)}${END}`).test(text))) {
+    return true;
+  }
+  // Relative spellings such as `cd <parent> && echo x > memory/a.md`: the
+  // folder's parent and its own name both appear as path components.
+  const segs = norm(base).split('/');
+  const [parent, name] = [segs.at(-2), segs.at(-1)];
+  if (!parent || parent.length < 4 || !name) return false;
+  const component = (s) => new RegExp(String.raw`(^|[/\s"'=\x60])${escapeRe(s)}${END}`);
+  return component(parent).test(text) && component(name).test(text);
+}
+
+export function shellWritesTo(cmd, protectedPaths, cwd) {
   if (typeof cmd !== 'string' || !protectedPaths?.length || !WRITE_TOKENS.test(cmd)) return false;
+  if (cwd && isProtectedPath(cwd, protectedPaths)) return true;
   const home = homedir().replace(/\\/g, '/');
-  let text = cmd.replace(/\\+/g, '/')
+  let text = cmd.replace(/\\ /g, ' ').replace(/\\+/g, '/')
     .replace(/(^|[\s"'=])~\//g, `$1${home}/`)
-    .replace(/\$(home|env:userprofile)\//gi, `${home}/`);
+    .replace(/\$\{?(home|env:userprofile)\}?\//gi, `${home}/`);
   if (WIN) text = text.toLowerCase();
-  return protectedPaths.some((base) => commandForms(base).some((form) => {
-    const f = WIN ? form.toLowerCase() : form;
-    return new RegExp(`${escapeRe(f)}(?=$|[/\\s"'\`;|&)])`).test(text);
-  }));
+  return protectedPaths.some((base) => mentions(text, base));
 }
 
 function lineDiff(oldText, newText) {

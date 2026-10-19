@@ -24,8 +24,11 @@ await runSafely(async () => {
 
   const project = getProject(draftsDir, root);
   if (milestone.firstOnly && project.firstMilestones.includes(milestone.kind)) return;
+  const head = headSha(root);
   updateProject(draftsDir, root, {
-    lastSeenSha: headSha(root) ?? project.lastSeenSha,
+    baselined: true,
+    sinceSha: project.sinceSha ?? head,
+    lastSeenSha: head ?? project.lastSeenSha,
     firstMilestones: milestone.firstOnly ? [...project.firstMilestones, milestone.kind] : project.firstMilestones,
   });
   emit({

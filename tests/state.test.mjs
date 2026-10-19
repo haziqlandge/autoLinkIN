@@ -23,6 +23,6 @@ test('missing or corrupt state reads as empty, defaults filled', () => {
   writeFileSync(join(d, 'state', 'projects.json'), '{not json');
   assert.deepEqual(readState(d), { projects: {} });
   assert.deepEqual(getProject(d, 'C:/x'), {
-    sinceSha: null, lastSeenSha: null, visibility: null, visibilityCheckedAt: null, firstMilestones: [],
+    baselined: false, sinceSha: null, lastSeenSha: null, visibility: null, visibilityCheckedAt: null, firstMilestones: [],
   });
 });

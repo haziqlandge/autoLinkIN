@@ -2,24 +2,44 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { tmpDir, runHook } from './helpers.mjs';
 import { isProtectedPath, shellWritesTo } from '../scripts/lib/guard.mjs';
 
 const GUARD = fileURLToPath(new URL('../scripts/hooks/pre-tool-use.mjs', import.meta.url));
-const P = ['C:/Users/me/.claude/projects/E--ProjectsPVT-eureka/memory'];
+const BASE = 'C:/Users/me/.claude/projects/notes-project/memory';
+const P = [BASE];
 
 test('path matching across styles (Review Focus 2)', { skip: process.platform !== 'win32' }, () => {
-  assert.ok(isProtectedPath('c:\\users\\ME\\.claude\\projects\\E--ProjectsPVT-eureka\\memory\\style.md', P));
-  assert.ok(!isProtectedPath('C:/Users/me/.claude/projects/E--ProjectsPVT-eureka/memory-old/x.md', P));
+  assert.ok(isProtectedPath('c:\\users\\ME\\.claude\\projects\\notes-project\\memory\\style.md', P));
+  assert.ok(!isProtectedPath('C:/Users/me/.claude/projects/notes-project/memory-old/x.md', P));
   assert.ok(isProtectedPath('C:/My Docs/notes/a.md', ['C:/My Docs/notes']));
 });
 
 test('shell writes', () => {
-  assert.ok(!shellWritesTo('cat "C:/Users/me/.claude/projects/E--ProjectsPVT-eureka/memory/a.md"', P));
-  assert.ok(shellWritesTo('echo x >> C:/Users/me/.claude/projects/E--ProjectsPVT-eureka/memory/a.md', P));
-  assert.ok(shellWritesTo('Set-Content -Path "C:\\Users\\me\\.claude\\projects\\E--ProjectsPVT-eureka\\memory\\a.md" x', P));
+  assert.ok(!shellWritesTo(`cat "${BASE}/a.md"`, P));
+  assert.ok(shellWritesTo(`echo x >> ${BASE}/a.md`, P));
+  assert.ok(shellWritesTo('Set-Content -Path "C:\\Users\\me\\.claude\\projects\\notes-project\\memory\\a.md" x', P));
   assert.ok(!shellWritesTo('echo x > C:/elsewhere/a.md', P));
+});
+
+test('more write forms and spellings reach the guard', { skip: process.platform !== 'win32' }, () => {
+  for (const c of [
+    `sc ${BASE}/a.md x`,
+    `Clear-Content ${BASE}/a.md`,
+    `[IO.File]::WriteAllText('${BASE}/a.md', 'x')`,
+    `curl -o ${BASE}/a.md https://example.com`,
+    `Invoke-WebRequest https://example.com -OutFile ${BASE}/a.md`,
+    `python -c "open('${BASE}/a.md', 'w').write('x')"`,
+    `git -C ${BASE} checkout -- a.md`,
+    'cd C:/Users/me/.claude/projects/notes-project && echo x > memory/a.md',
+  ]) assert.ok(shellWritesTo(c, P), c);
+  const home = join(homedir(), 'notes-project', 'memory');
+  assert.ok(shellWritesTo('echo x > ${HOME}/notes-project/memory/a.md', [home]));
+  assert.ok(shellWritesTo('echo x > C:/My\\ Docs/notes/a.md', ['C:/My Docs/notes']));
+  assert.ok(shellWritesTo('echo x > a.md', P, `${BASE}/sub`));
+  assert.ok(!shellWritesTo('cat a.md', P, BASE));
 });
 
 test('hook asks with the change, ignores others, silent without config', () => {
@@ -35,6 +55,8 @@ test('hook asks with the change, ignores others, silent without config', () => {
   assert.match(w.hookSpecificOutput.permissionDecisionReason, /-old line/);
   const sh = JSON.parse(runHook(GUARD, { tool_name: 'Bash', tool_input: { command: `echo hi >> "${f}"` } }, env).stdout);
   assert.equal(sh.hookSpecificOutput.permissionDecision, 'ask');
+  const rel = JSON.parse(runHook(GUARD, { tool_name: 'Bash', tool_input: { command: 'echo hi > style.md' }, cwd: dir }, env).stdout);
+  assert.equal(rel.hookSpecificOutput.permissionDecision, 'ask');
   assert.equal(runHook(GUARD, { tool_name: 'Edit', tool_input: { file_path: join(tmpDir(), 'x.md') } }, env).stdout, '');
   assert.equal(runHook(GUARD, { tool_name: 'Edit', tool_input: { file_path: f } }, {}).stdout, '');
 });

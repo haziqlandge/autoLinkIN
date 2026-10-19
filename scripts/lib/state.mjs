@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const DEFAULTS = Object.freeze({
+  baselined: false,
   sinceSha: null,
   lastSeenSha: null,
   visibility: null,

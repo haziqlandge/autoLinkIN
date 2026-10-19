@@ -50,7 +50,7 @@ If you say no, that work is not offered again.
 
 ## Private and NDA projects
 
-Private GitHub repos are skipped. To mark any project, put a `.autolinkin` file in its root:
+Private GitHub repos are skipped. So are GitHub repos whose visibility can't be confirmed (for example when `gh` is missing or signed out), so private work never slips through. To mark any project, put a `.autolinkin` file in its root:
 
 ```json
 { "nda": true }

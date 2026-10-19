@@ -58,5 +58,6 @@ export function checkEligibility(root, { draftsDir, ghVisibility = defaultGhVisi
   const visibility = visibilityFor(root, ownerRepo, { draftsDir, ghVisibility, now });
   if (visibility === 'private') return { eligible: false, reason: 'private' };
   if (visibility === 'public') return { eligible: true, reason: 'public' };
-  return { eligible: true, reason: 'unknown' };
+  // gh missing, signed out or offline: fail closed so private work never leaks.
+  return { eligible: false, reason: 'unknown' };
 }

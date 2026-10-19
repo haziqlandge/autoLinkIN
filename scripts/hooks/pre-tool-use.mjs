@@ -16,7 +16,7 @@ await runSafely(async () => {
   const args = input.tool_input || {};
   let hit = false;
   if (FILE_TOOLS.has(tool)) hit = isProtectedPath(args.file_path || args.notebook_path, protectedPaths);
-  else if (SHELL_TOOLS.has(tool)) hit = shellWritesTo(args.command, protectedPaths);
+  else if (SHELL_TOOLS.has(tool)) hit = shellWritesTo(args.command, protectedPaths, input.cwd);
   if (!hit) return;
   emit({
     hookSpecificOutput: {

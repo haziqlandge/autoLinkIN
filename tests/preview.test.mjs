@@ -20,7 +20,7 @@ test('fold backs off to whitespace and respects three lines', () => {
 
 test('renders escaped text, media and comment', () => {
   const h = renderPreview({
-    post: '<script>x</script> hi', comment: 'link here', media: ['shot.png', 'demo.mp4'], displayName: 'Regel Fallen', headline: 'h',
+    post: '<script>x</script> hi', comment: 'link here', media: ['shot.png', 'demo.mp4'], displayName: 'Test Person', headline: 'h',
   });
   assert.ok(!h.includes('<script>x'));
   assert.match(h, /&lt;script&gt;/);
@@ -28,7 +28,7 @@ test('renders escaped text, media and comment', () => {
   assert.match(h, /<video[^>]+media\/demo\.mp4/);
   assert.match(h, /link here/);
   assert.match(h, /see more/);
-  assert.match(h, /Regel Fallen/);
+  assert.match(h, /Test Person/);
 });
 
 test('cli preview writes preview.html from the draft folder', () => {
@@ -37,7 +37,7 @@ test('cli preview writes preview.html from the draft folder', () => {
   writeFileSync(join(dir, 'media', 'a.png'), '');
   writeFileSync(join(dir, 'post.md'), 'I shipped it.');
   writeFileSync(join(dir, 'first-comment.md'), 'Repo: x');
-  const res = spawnSync(process.execPath, [CLI, 'preview', dir, '--name', 'Regel Fallen'], { encoding: 'utf8' });
+  const res = spawnSync(process.execPath, [CLI, 'preview', dir, '--name', 'Test Person'], { encoding: 'utf8' });
   assert.equal(res.status, 0);
   const html = readFileSync(join(dir, 'preview.html'), 'utf8');
   assert.match(html, /I shipped it\./);

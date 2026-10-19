@@ -35,6 +35,18 @@ test('silent when stop_hook_active, outside repos, or after a milestone hook saw
   assert.deepEqual(runHook(STOP, 'junk', env), { code: 0, stdout: '' });
 });
 
+test('first sight of a repo with history baselines silently, then reports only new work', () => {
+  const d = tmpDir();
+  const r = makeRepo();
+  const env = { CLAUDE_PLUGIN_OPTION_DRAFTS_DIR: d };
+  commit(r, 'ancient work');
+  assert.equal(runHook(STOP, { cwd: r }, env).stdout, '');
+  commit(r, 'fresh feature');
+  const ctx = runHook(STOP, { cwd: r }, env).stdout;
+  assert.match(ctx, /fresh feature/);
+  assert.doesNotMatch(ctx, /ancient work/);
+});
+
 test('unknown sinceSha falls back to recent commits (Review Focus 5)', () => {
   const d = tmpDir();
   const r = makeRepo();
