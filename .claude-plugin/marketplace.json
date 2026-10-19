@@ -1,0 +1,12 @@
+{
+  "name": "autolinkin",
+  "owner": { "name": "Haziq" },
+  "description": "autoLinkIN: LinkedIn drafts from shipped work, reviewed before posting",
+  "plugins": [
+    {
+      "name": "autolinkin",
+      "source": "./",
+      "description": "Turns shipped work into LinkedIn drafts you review before posting"
+    }
+  ]
+}

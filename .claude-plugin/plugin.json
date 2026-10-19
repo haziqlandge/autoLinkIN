@@ -1,0 +1,40 @@
+{
+  "name": "autolinkin",
+  "displayName": "autoLinkIN",
+  "version": "0.1.0",
+  "description": "Turns shipped work into LinkedIn drafts you review before posting",
+  "author": { "name": "Haziq" },
+  "repository": "https://github.com/haziqlandge/autoLinkIN",
+  "license": "MIT",
+  "keywords": ["linkedin", "drafts", "build-in-public"],
+  "userConfig": {
+    "drafts_dir": {
+      "type": "directory",
+      "title": "Drafts folder",
+      "description": "Where the linkedin-drafts folder lives (drafts, history, learned voice, state)",
+      "required": true
+    },
+    "style_sources": {
+      "type": "string",
+      "multiple": true,
+      "title": "Writing-style files (read only)",
+      "description": "Files that describe your writing style. autoLinkIN reads them and never edits them"
+    },
+    "protected_paths": {
+      "type": "string",
+      "multiple": true,
+      "title": "Protected paths",
+      "description": "Files or folders that need your approval, with the change shown, before anything edits them"
+    },
+    "display_name": {
+      "type": "string",
+      "title": "Name on preview card",
+      "description": "Shown on the LinkedIn feed-card preview"
+    },
+    "headline": {
+      "type": "string",
+      "title": "Headline on preview card",
+      "description": "Shown under the name on the preview"
+    }
+  }
+}
