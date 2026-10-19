@@ -1,0 +1,6 @@
+# Personal data: drafts, history, learned voice, state
+linkedin-drafts/
+
+node_modules/
+.DS_Store
+Thumbs.db
