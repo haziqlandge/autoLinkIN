@@ -1,6 +1,13 @@
 # Personal data: drafts, history, learned voice, state
 linkedin-drafts/
 
+# Markdown stays local, except the plan and handoffs
+*.md
+!docs/superpowers/plans/*.md
+!**/*handoff*.md
+!**/*hand-off*.md
+!**/handoffs/**/*.md
+
 node_modules/
 .DS_Store
 Thumbs.db
