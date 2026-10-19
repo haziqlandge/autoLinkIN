@@ -19,11 +19,14 @@ Keep this list current when LinkedIn changes. Everything else derives from it.
 3. On `/feed/`, click "Start a post". Wait about 2 seconds for the dialog.
 4. **Click inside the text box before typing.** Typing straight after opening the dialog can land nowhere.
 5. Type `post.md` one line at a time:
-   - press Shift+Enter between lines inside a paragraph
+   - press Enter once between lines, such as list items. Each line becomes its own paragraph with no gap
    - press Enter twice for a blank line between paragraphs
-6. Check the text landed: read `document.activeElement.innerText`, or `get_page_text`. A screenshot taken straight after typing can be stale and show the empty placeholder.
-7. **Media: the browser tools cannot drive the native file picker,** so media is not attached automatically. Tell the user exactly which files to drag into the composer from the draft's `media/` folder, in order.
-8. Stop. Tell the user the composer is filled and that they press Post when they are happy. They can still edit the text in the composer.
+   - a leading `- ` stays plain text; the editor does not turn it into a formatted list
+6. Verify line by line: the `:scope > p` children of the editor should match `post.md`'s lines, with an empty `<p>` for each blank line.
+7. **Don't touch the audience chips** ("Post to ..." and "Comments: ..."). They are the user's choice. Report what they show, and point out that "Connections only" on an account with no connections means nobody will see the post.
+   A screenshot taken straight after typing can be stale and show the empty placeholder, so trust the DOM check.
+8. **Media: the browser tools cannot drive the native file picker,** so media is not attached automatically. Tell the user exactly which files to drag into the composer from the draft's `media/` folder, in order.
+9. Stop. Tell the user the composer is filled and that they press Post when they are happy. They can still edit the text in the composer.
 
 ## After the user says it is posted
 
