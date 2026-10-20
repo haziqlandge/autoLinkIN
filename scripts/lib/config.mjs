@@ -31,5 +31,6 @@ export function loadConfig(env = process.env, overrides = {}) {
     protectedPaths: parseList(pick('protectedPaths', 'PROTECTED_PATHS')),
     displayName: pick('displayName', 'DISPLAY_NAME') ?? '',
     headline: pick('headline', 'HEADLINE') ?? '',
+    previewStyle: pick('previewStyle', 'PREVIEW_STYLE') ?? 'cards',
   };
 }

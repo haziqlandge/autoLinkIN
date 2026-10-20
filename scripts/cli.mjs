@@ -12,7 +12,7 @@ import { createDraft, setStatus, readHistory, VOICE_TEMPLATE } from './lib/draft
 const USAGE = `usage: cli.mjs <command> [args] [--drafts-dir <dir>]
   new <projectRoot> <title>          create a draft folder, print {id, dir}
   check <draftDir>                   run the style checker, write checks.txt (exit 1 on fails)
-  preview <draftDir> [--name N] [--headline H]   write preview.html
+  preview <draftDir> [--name N] [--headline H] [--style cards|plain]   write preview.html
   status <id> <status> [postUrl]     record drafting|approved|posted|abandoned
   declined <projectRoot>             the user said no: skip work up to HEAD
   drafted <projectRoot>              a draft was made: skip work up to HEAD
@@ -70,8 +70,9 @@ const commands = {
     return fails.length ? 1 : 0;
   },
   async preview([draftDir], cfg) {
-    const { writePreview } = await import('./lib/preview.mjs');
-    print(writePreview(need(draftDir, 'draftDir'), { displayName: cfg.displayName, headline: cfg.headline }));
+    const { writePreview, STYLES } = await import('./lib/preview.mjs');
+    if (!STYLES[cfg.previewStyle]) throw new UsageError(`unknown style "${cfg.previewStyle}", use ${Object.keys(STYLES).join(' or ')}`);
+    print(writePreview(need(draftDir, 'draftDir'), { displayName: cfg.displayName, headline: cfg.headline, style: cfg.previewStyle }));
   },
   status([id, status, postUrl], { draftsDir }) {
     setStatus(need(draftsDir, '--drafts-dir'), need(id, 'id'), need(status, 'status'), postUrl ? { postUrl } : {});
@@ -109,6 +110,7 @@ async function main() {
     draftsDir: flags['drafts-dir'],
     displayName: flags.name,
     headline: flags.headline,
+    previewStyle: flags.style,
   });
   try {
     if (!command || !commands[command]) throw new UsageError(command ? `unknown command "${command}"` : 'no command');

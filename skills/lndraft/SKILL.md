@@ -64,12 +64,14 @@ Turn what the user shipped into a LinkedIn draft they review before anything goe
 
    Leave out `impressions` when you could not read them. If `stats_profile` is not set, skip this step; the preview will say there are no stats yet.
 10. **Analysis.** Write `analysis.md` in `<dir>`: two or three short paragraphs in plain words. Cover what will make this post work, its weakest spot, and one concrete change that would likely help. No jargon and no internal details (tests, tools, rule names).
-11. **Preview.** Run `preview <dir>`, then show the printed `preview.html` path in the side panel with SendUserFile (display: render). Beside the post card it shows an Insights dashboard, built from:
+11. **Preview.** Run `preview <dir>`, then show the printed `preview.html` path in the side panel with SendUserFile (display: render). It opens on the post card, with a sidebar of insight pages (Performance, Content, Checks, Analysis) built from:
     - account stats
     - an expected-reach estimate
     - a content score with what is helping and what is holding the post back
     - `analysis.md`
     - plain-language checks
+
+    Add `--style plain` for the quieter single-page layout with the card and dashboard side by side.
 
     Tell the user they can edit `post.md` directly or reply with changes.
 12. **Revise.** After every change, run `check` and `preview` again, and update `analysis.md` when the change affects it.

@@ -1,8 +1,14 @@
 // LinkedIn feed-card preview for a draft folder.
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
-import { join, extname, dirname } from 'node:path';
+import { join, extname, dirname, basename } from 'node:path';
 import { FOLD_CHARS, POST_LIMIT, checkDraft } from './checker.mjs';
 import { contentSignals, estimateReach } from './insights.mjs';
+import { esc } from './html.mjs';
+import * as cards from './dashboard.mjs';
+import * as plain from './dashboard-plain.mjs';
+
+// Dashboard styles: "cards" (default) and "plain" (a quieter analytics layout).
+export const STYLES = { cards, plain };
 
 const IMAGE = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif']);
 const VIDEO = new Set(['.mp4', '.webm', '.mov']);
@@ -21,10 +27,6 @@ export function foldIndex(text) {
     charCut = j || FOLD_CHARS;
   }
   return Math.min(lineCut, charCut);
-}
-
-function esc(s) {
-  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function mediaTag(file) {
@@ -61,11 +63,9 @@ function icon(name, size = 20) {
 const STYLE = `
   :root { --text: rgba(0,0,0,.9); --muted: rgba(0,0,0,.6); --icon: rgba(0,0,0,.75); --line: rgba(140,140,140,.2); --blue: #0a66c2; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: #f4f2ee; color: var(--text); font-size: 14px; line-height: 20px; -webkit-font-smoothing: antialiased;
+  body { margin: 0; background: #f6f5f1; -webkit-font-smoothing: antialiased; }
+  .feed { color: var(--text); font-size: 14px; line-height: 20px;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, Oxygen, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; }
-  .wrap { max-width: 1040px; margin: 24px auto; padding: 0 16px; display: grid; grid-template-columns: minmax(0, 552px) minmax(0, 1fr); gap: 24px; align-items: start; }
-  @media (max-width: 960px) { .wrap { grid-template-columns: minmax(0, 1fr); max-width: 584px; } }
-  @media (min-width: 961px) { .col-post { position: sticky; top: 24px; } }
   .card { background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
   a { color: var(--blue); text-decoration: none; } a:hover { text-decoration: underline; }
   .avatar { flex: none; width: 48px; height: 48px; border-radius: 999px; display: grid; place-items: center; background: #dfdad2; color: #56524c; font-size: 20px; font-weight: 600; }
@@ -99,137 +99,8 @@ const STYLE = `
   .c-top .tool { width: 24px; height: 19px; }
   .c-text { margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
   .c-acts { display: flex; gap: 16px; margin-top: 6px; color: var(--icon); }
-  .meta { margin: 8px 4px 24px; font-size: 12px; color: var(--muted); }
-  .dash { display: grid; gap: 12px; }
-  .dash-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-  .dash-head h2 { margin: 0; font-size: 20px; line-height: 24px; font-weight: 600; }
-  .source { font-size: 12px; color: var(--muted); }
-  .source.sample { padding: 2px 8px; border-radius: 999px; background: #fdf3dc; color: #7a4a00; font-weight: 600; }
-  .panel { padding: 16px; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
-  .panel h3 { margin: 0 0 12px; font-size: 16px; line-height: 20px; font-weight: 600; }
-  .panel h4 { margin: 0 0 6px; font-size: 12px; line-height: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-  .panel p { margin: 6px 0; } .panel ul, .panel ol { margin: 6px 0; padding-left: 20px; }
-  .muted { color: var(--muted); }
-  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .tile { padding: 12px; border-radius: 8px; background: #f8f7f4; }
-  .num { font-size: 22px; line-height: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .lbl { font-size: 12px; color: var(--muted); }
-  .reach { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-  .big { font-size: 28px; line-height: 34px; font-weight: 700; color: var(--blue); font-variant-numeric: tabular-nums; }
-  .score { margin: 12px 0 4px; }
-  .score-top { display: flex; justify-content: space-between; font-size: 13px; }
-  .bar { height: 8px; margin-top: 4px; border-radius: 999px; background: #ebe8e3; overflow: hidden; }
-  .bar i { display: block; height: 100%; border-radius: 999px; background: var(--blue); }
-  .basis { font-size: 12px; color: var(--muted); }
-  .factors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
-  .factors ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: 13px; line-height: 18px; }
-  .factors li { position: relative; padding-left: 18px; }
-  .factors .plus li::before, .factors .minus li::before { position: absolute; left: 0; top: 0; font-weight: 700; }
-  .factors .plus li::before { content: "+"; color: #057642; } .factors .minus li::before { content: "\\2212"; color: #b24020; }
-  .sum { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
-  .checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-  .checks li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; }
-  .dot { width: 20px; height: 20px; border-radius: 999px; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700; margin-top: 1px; }
-  .dot.pass { background: #057642; } .dot.warn { background: #c37d16; } .dot.fail { background: #cc1016; }
-  .c-label { font-weight: 600; } .c-note { font-size: 13px; color: var(--muted); }
-  .foot { margin: 0 4px; font-size: 12px; color: var(--muted); }
-  @media (max-width: 420px) { .factors { grid-template-columns: minmax(0, 1fr); } }
+  .meta { margin: 8px 4px 12px; font-size: 12px; color: var(--muted); }
 `;
-
-function inline(text) {
-  return esc(text)
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-}
-
-// Markdown-lite to HTML: ## headings, - and 1. lists, paragraphs. A # title is skipped.
-function mdHtml(md) {
-  const out = [];
-  let list = null;
-  const close = () => { if (list) { out.push(`<${list.tag}>${list.items.join('')}</${list.tag}>`); list = null; } };
-  for (const raw of md.split(/\r?\n/)) {
-    const line = raw.trim();
-    const bullet = line.match(/^[-*]\s+(.*)$/);
-    const numbered = line.match(/^\d+\.\s+(.*)$/);
-    if (bullet || numbered) {
-      const tag = bullet ? 'ul' : 'ol';
-      if (list && list.tag !== tag) close();
-      if (!list) list = { tag, items: [] };
-      list.items.push(`<li>${inline((bullet || numbered)[1])}</li>`);
-      continue;
-    }
-    close();
-    if (!line || /^#\s/.test(line)) continue;
-    const heading = line.match(/^#{2,6}\s+(.*)$/);
-    out.push(heading ? `<h3>${inline(heading[1])}</h3>` : `<p>${inline(line)}</p>`);
-  }
-  close();
-  return out.join('\n');
-}
-
-const fmt = (n) => (Number.isFinite(n) ? Math.round(n).toLocaleString('en-US') : '–');
-
-function medianOf(values) {
-  const s = values.filter(Number.isFinite).sort((a, b) => a - b);
-  if (!s.length) return NaN;
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-}
-
-const BASIS = {
-  impressions: 'Based on the impressions of your recent posts.',
-  engagement: 'Based on reactions and comments on your recent posts, since impressions are not public.',
-  network: 'Based on your followers and connections, since no recent posts were found.',
-};
-
-const MARK = { pass: '✓', warn: '!', fail: '×' };
-
-function sourceLabel(account) {
-  if (!account) return '';
-  if (account.sample) return '<span class="source sample">Sample data</span>';
-  const when = account.capturedAt ? new Date(account.capturedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
-  return `<span class="source">From ${esc(account.source || 'LinkedIn')}${when ? `, ${esc(when)}` : ''}</span>`;
-}
-
-function dashboardHtml({ account = null, analysis = '', checks = [], signals = null, estimate = null } = {}) {
-  const posts = Array.isArray(account?.recentPosts) ? account.recentPosts : [];
-  const accountPanel = account ? `
-    <section class="panel"><h3>Your account</h3><div class="tiles">
-      <div class="tile"><div class="num">${fmt(account.followers)}</div><div class="lbl">Followers</div></div>
-      <div class="tile"><div class="num">${fmt(account.connections)}</div><div class="lbl">Connections</div></div>
-      <div class="tile"><div class="num">${fmt(medianOf(posts.map((p) => p.impressions)))}</div><div class="lbl">Typical impressions per post</div></div>
-      <div class="tile"><div class="num">${fmt(medianOf(posts.map((p) => (p.reactions || 0) + (p.comments || 0) + (p.reposts || 0))))}</div><div class="lbl">Typical reactions and comments</div></div>
-    </div></section>`
-    : '<section class="panel"><h3>Your account</h3><p class="muted">No account stats yet. Set <b>stats_profile</b> and lndraft will read your followers, connections and recent posts before the preview.</p></section>';
-
-  const score = signals?.score ?? 0;
-  const reachPanel = `
-    <section class="panel"><h3>How this post could do</h3>
-      ${estimate ? `<div class="reach"><span class="big">${fmt(estimate.low)} to ${fmt(estimate.high)}</span><span class="lbl">expected impressions</span></div>
-      <div class="lbl">${fmt(estimate.reactions?.low)} to ${fmt(estimate.reactions?.high)} reactions and comments</div>`
-    : '<p class="muted">Add account stats to see an expected reach.</p>'}
-      <div class="score"><div class="score-top"><span>Content score</span><b>${score}/100</b></div><div class="bar"><i style="width:${Math.max(0, Math.min(100, score))}%"></i></div></div>
-      ${estimate ? `<p class="basis">${esc(BASIS[estimate.basis] || '')}</p>` : ''}
-      ${signals ? `<div class="factors">
-        <div><h4>Helping</h4><ul class="plus">${(signals.helping || []).map((h) => `<li>${esc(h)}</li>`).join('') || '<li class="muted">Nothing yet</li>'}</ul></div>
-        <div><h4>Holding it back</h4><ul class="minus">${(signals.holding || []).map((h) => `<li>${esc(h)}</li>`).join('') || '<li class="muted">Nothing</li>'}</ul></div>
-      </div>` : ''}
-    </section>`;
-
-  const analysisPanel = `<section class="panel"><h3>Analysis</h3>${analysis.trim() ? mdHtml(analysis) : '<p class="muted">No analysis written for this draft yet.</p>'}</section>`;
-
-  const passed = checks.filter((c) => c.status === 'pass').length;
-  const checksPanel = `
-    <section class="panel"><h3>Checks</h3><p class="sum">${passed} of ${checks.length} checks passed</p>
-      <ul class="checks">${checks.map((c) => `<li><span class="dot ${esc(c.status)}">${MARK[c.status] || ''}</span><div><div class="c-label">${esc(c.label)}</div><div class="c-note">${esc(c.note)}</div></div></li>`).join('')}</ul>
-    </section>`;
-
-  return `<aside class="dash">
-    <div class="dash-head"><h2>Insights</h2>${sourceLabel(account)}</div>
-    ${accountPanel}${reachPanel}${analysisPanel}${checksPanel}
-    <p class="foot">Estimates combine your own numbers with common LinkedIn patterns. They are not LinkedIn's internal data.</p>
-  </aside>`;
-}
 
 // The feed shows exactly three rendered lines (blank lines count) and then
 // "… more". The server-side fold is a character estimate; this script re-cuts
@@ -245,6 +116,7 @@ const FIT_SCRIPT = String.raw`(() => {
   const height = () => { const cs = getComputedStyle(p); return p.getBoundingClientRect().height - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom); };
   const show = (n) => { p.innerHTML = rich(text.slice(0, n)) + (n < text.length ? '<span class="dots">…</span><button class="more">more</button>' : ''); };
   p.addEventListener('click', (e) => { if (e.target.classList.contains('more')) p.innerHTML = rich(text); });
+  const fit = () => {
   show(text.length);
   if (height() <= MAX) return;
   let lo = 0, hi = text.length;
@@ -255,9 +127,13 @@ const FIT_SCRIPT = String.raw`(() => {
   show(n || lo);
   const at = document.getElementById('fold-at');
   if (at) at.textContent = String(n || lo);
+  };
+  fit();
+  window.__fitPost = fit;
 })();`;
 
-export function renderPreview({ post = '', comment = '', media = [], displayName = '', headline = '', insights = null }) {
+export function renderPreview({ post = '', comment = '', media = [], displayName = '', headline = '', insights = null, title = '', style = 'cards' }) {
+  const ui = STYLES[style] || cards;
   const name = displayName || 'You';
   const initial = esc(Array.from(name.trim())[0] || 'Y');
   const cut = foldIndex(post);
@@ -280,9 +156,10 @@ export function renderPreview({ post = '', comment = '', media = [], displayName
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Draft preview</title>
-<style>${STYLE}</style></head>
-<body><div class="wrap">
-<main class="col-post">
+${ui.DASH_HEAD}
+<style>${STYLE}${ui.DASH_CSS}</style></head>
+<body>
+${ui.page({ insights, title, post, feed: `<div class="feed">
 <div class="card">
   <div class="head">
     <div class="avatar">${initial}</div>
@@ -308,11 +185,10 @@ export function renderPreview({ post = '', comment = '', media = [], displayName
   ${commentBlock ? '' : '<div style="height:12px"></div>'}
 </div>
 <div class="meta">${chars} / ${POST_LIMIT} characters. The feed cuts to "\u2026 more" at character <span id="fold-at">${cut}</span>.</div>
-</main>
-${insights ? dashboardHtml(insights) : ''}
-</div>
+</div>` })}
 <script type="application/json" id="post-data">${JSON.stringify({ text: post }).replace(/</g, '\\u003c')}</script>
 <script>${FIT_SCRIPT}</script>
+<script>${ui.DASH_SCRIPT}</script>
 </body></html>
 `;
 }
@@ -321,7 +197,7 @@ function readText(path) {
   try { return readFileSync(path, 'utf8'); } catch { return ''; }
 }
 
-export function writePreview(draftDir, { displayName = '', headline = '' } = {}) {
+export function writePreview(draftDir, { displayName = '', headline = '', style = 'cards' } = {}) {
   let media = [];
   try { media = readdirSync(join(draftDir, 'media')).sort(); } catch { /* no media yet */ }
   const post = readText(join(draftDir, 'post.md')).trim();
@@ -330,6 +206,8 @@ export function writePreview(draftDir, { displayName = '', headline = '' } = {})
   try { account = JSON.parse(readFileSync(join(dirname(draftDir), 'account.json'), 'utf8')); } catch { /* no stats yet */ }
   const signals = contentSignals(post, { media });
   const html = renderPreview({
+    title: basename(draftDir),
+    style,
     post,
     comment,
     media,

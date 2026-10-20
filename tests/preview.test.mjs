@@ -40,41 +40,91 @@ test('matches the LinkedIn feed card layout', () => {
   for (const label of ['Like', 'Comment', 'Repost', 'Send']) assert.match(h, new RegExp(`aria-label="${label}"`));
   assert.match(h, /Add a comment/);
   assert.match(h, /Most relevant/);
-  assert.match(h, /#f4f2ee/i);
+  assert.match(h, /class="badge">Author</);
   // The full text travels as JSON so the page can re-cut at exactly three rendered lines.
   const data = JSON.parse(h.match(/<script type="application\/json" id="post-data">([\s\S]*?)<\/script>/)[1]);
   assert.match(data.text, /#ClaudeCode/);
   assert.ok(!/<\/script>/i.test(JSON.stringify(renderPreview({ post: '</script><b>x', comment: '' }).match(/id="post-data">([\s\S]*?)<\/script>/)[1])));
 });
 
-test('dashboard shows account tiles, projection, analysis and plain checks', () => {
-  const h = renderPreview({
-    post: 'I shipped it.', comment: '',
-    insights: {
-      account: { sample: true, followers: 1240, connections: 860, recentPosts: [{ impressions: 900, reactions: 30, comments: 6 }] },
-      analysis: 'Strong hook. <b>Add</b> an image.',
-      checks: [{ id: 'voice', label: 'Reads like you, not like AI', status: 'pass', note: 'No AI clichés' },
-        { id: 'hook', label: 'Hook lands before more', status: 'warn', note: 'Opens with a question' }],
-      signals: { score: 72, helping: ['Has an image'], holding: ['No question at the end'] },
-      estimate: { basis: 'impressions', low: 500, high: 1200, reactions: { low: 10, high: 40 } },
-    },
+const INSIGHTS = {
+  account: { sample: true, followers: 1240, connections: 860, recentPosts: [
+    { label: 'Launch', impressions: 2100, reactions: 40, comments: 8, reposts: 2 },
+    { label: 'Recap', impressions: 900, reactions: 12, comments: 2 }] },
+  analysis: 'Strong hook. <b>Add</b> an image.\n\nAdd a question at the end.',
+  checks: [{ id: 'voice', label: 'Reads like you, not like AI', status: 'pass', note: 'No AI clichés' },
+    { id: 'hook', label: 'Hook lands before more', status: 'warn', note: 'Opens with a question' }],
+  signals: { score: 72, helping: ['Has an image'], holding: ['No question at the end'] },
+  estimate: { basis: 'impressions', low: 500, high: 1200, engagementRate: 0.024, reactions: { low: 10, high: 40 } },
+};
+const chartData = (h, id) => JSON.parse(h.match(new RegExp(`id="${id}">([\\s\\S]*?)</script>`))[1]);
+
+for (const style of ['cards', 'plain']) {
+  test(`${style} style shows account numbers, projection, analysis and plain checks`, () => {
+    const h = renderPreview({ post: 'I shipped it.', comment: '', insights: INSIGHTS, style, title: '2026-01-01-demo' });
+    assert.match(h, /1,240/);
+    assert.match(h, /860 connections/);
+    assert.match(h, /Sample data/);
+    assert.match(h, /data-count="500"[\s\S]*data-count="1200"/);
+    assert.match(h, /data-count="72"/);
+    assert.match(h, /Almost there/);
+    assert.match(h, /Strong hook\. &lt;b&gt;Add&lt;\/b&gt; an image\./);
+    assert.match(h, /Add a question at the end\./);
+    assert.match(h, /Reads like you, not like AI/);
+    assert.match(h, /1 of 2 checks passed/);
+    assert.match(h, /No question at the end/);
+    assert.match(h, />demo</);
+    assert.doesNotMatch(h, /npm|\d+ tests/i);
+    assert.doesNotMatch(h, /<script src=/); // no CDN scripts: motion is native
+    assert.doesNotMatch(h, /data-width|>Mobile</); // one feed width, no desktop/mobile switch
+    const data = chartData(h, style === 'cards' ? 'p-chart-data' : 'd-chart-data');
+    assert.deepEqual(data.labels, ['Launch', 'Recap']);
+    assert.deepEqual(data.series.imp.est, [500, 1200]);
+    assert.deepEqual(data.series.eng.values, [50, 14]);
   });
-  assert.match(h, /class="dash"/);
-  assert.match(h, /1,240/);
-  assert.match(h, /Sample data/);
-  assert.match(h, /500[\s\S]*1,200/);
-  assert.match(h, /72/);
-  assert.match(h, /Strong hook\. &lt;b&gt;Add&lt;\/b&gt; an image\./);
-  assert.match(h, /Reads like you, not like AI/);
-  assert.match(h, /1 of 2 checks passed/);
-  assert.match(h, /No question at the end/);
-  assert.doesNotMatch(h, /npm|\d+ tests/i);
+}
+
+test('cards style: one board reads readiness, the post, then the forecast', () => {
+  const h = renderPreview({ post: 'I shipped it.', comment: '', insights: INSIGHTS });
+  // Three columns in story order, no page tabs.
+  assert.match(h, /aria-label="Is it ready\?"[\s\S]*aria-label="The post"[\s\S]*class="card"[\s\S]*aria-label="How far could it go\?"/);
+  assert.doesNotMatch(h, /data-go=|class="p-page"/);
+  // Guardrails are one cell per check, issues first.
+  assert.equal((h.match(/class="b-chk /g) || []).length, 2);
+  assert.match(h, /class="b-chk warn"[^>]*data-label="Hook lands before more"/);
+  // The analysis sits under the post and ends on the one change worth making.
+  assert.match(h, /aria-label="The post"[\s\S]*class="b-card b-read"[\s\S]*Strong hook[\s\S]*class="p-try"[\s\S]*Add a question at the end\.[\s\S]*aria-label="How far could it go\?"/);
+  for (const m of ['imp', 'eng', 'rate']) assert.match(h, new RegExp(`data-metric="${m}"`));
+  assert.equal((h.match(/class="p-col" data-i=/g) || []).length, 2);
+  assert.match(h, /class="p-col post"/);
+  // The engagement mix has its own card; one insight card steps through the rest.
+  assert.match(h, /class="b-card b-mixcard"/);
+  for (const tab of ['Mix', 'Audience', 'Timing', 'Top posts', 'Trend']) assert.match(h, new RegExp(`data-to="\\d"[^>]*>${tab}<`));
+  assert.match(h, /Engagement mix[\s\S]*Reactions[\s\S]*52[\s\S]*Comments[\s\S]*10[\s\S]*Reposts[\s\S]*2/);
+});
+
+test('plain style: a KPI strip switches one chart, with tabbed lists below', () => {
+  const h = renderPreview({ post: 'I shipped it.', comment: '', insights: INSIGHTS, style: 'plain' });
+  assert.match(h, /button class="d-kpi"[^>]*data-metric="imp" aria-selected="true"/);
+  for (const tab of ['Analysis', 'Helping', 'Holding back', 'Checks', 'Recent posts']) assert.match(h, new RegExp(`role="tab"[^>]*>${tab}<`));
+  assert.match(h, /class="d-try"[\s\S]*Add a question at the end\./);
+});
+
+test('unknown styles fall back to cards', () => {
+  assert.match(renderPreview({ post: 'x', comment: '', insights: INSIGHTS, style: 'nope' }), /class="p-top"/);
+});
+
+test('verdict follows the checks and the score', () => {
+  const v = (checks, score) => renderPreview({ post: 'x', comment: '', insights: { checks, signals: { score, helping: [], holding: [] }, estimate: null } });
+  assert.match(v([{ id: 'a', label: 'A', status: 'pass', note: '' }], 80), /Ready to post/);
+  assert.match(v([{ id: 'a', label: 'A', status: 'fail', note: '' }], 90), /Needs fixes/);
+  assert.match(v([{ id: 'a', label: 'A', status: 'pass', note: '' }], 40), /Could be stronger/);
 });
 
 test('without account stats the dashboard says how to add them', () => {
   const h = renderPreview({ post: 'x', comment: '', insights: { checks: [], signals: { score: 40, helping: [], holding: [] }, estimate: null } });
-  assert.match(h, /class="dash"/);
   assert.match(h, /No account stats yet/);
+  assert.match(renderPreview({ post: 'x', comment: '', style: 'plain', insights: { checks: [], signals: { score: 40, helping: [], holding: [] }, estimate: null } }), /No account stats yet/);
 });
 
 test('cli preview writes preview.html with the dashboard from the draft folder', () => {
@@ -94,4 +144,11 @@ test('cli preview writes preview.html with the dashboard from the draft folder',
   assert.match(html, /A short, honest launch post\./);
   assert.match(html, /321/);
   assert.match(html, /Hook lands before/);
+  assert.match(html, /class="p-top"/);
+  const plain = spawnSync(process.execPath, [CLI, 'preview', dir, '--style', 'plain'], { encoding: 'utf8' });
+  assert.equal(plain.status, 0);
+  assert.match(readFileSync(join(dir, 'preview.html'), 'utf8'), /class="d-kpis"/);
+  const bad = spawnSync(process.execPath, [CLI, 'preview', dir, '--style', 'nope'], { encoding: 'utf8' });
+  assert.equal(bad.status, 2);
+  assert.match(bad.stderr, /unknown style "nope"/);
 });
