@@ -13,7 +13,7 @@ Build a video for a draft that already exists. Skip the debate about whether to 
 
 ## Steps
 
-1. **Pick the draft.** Use the one the user names. Otherwise run `history <root>` and take the latest entry whose status is `drafting` or `approved`. Read its `brief.md` and `post.md`.
+1. **Pick the draft.** Use the one the user mentions or names. Otherwise run `history <root>` and take the latest entry whose status is `drafting` or `approved`. Read its `brief.md` and `post.md`.
 2. **Storyboard.** Propose the length, aspect ratio and style that fit this project and this post, and confirm them with the user. There are no defaults.
 
    The style is hyper-animated and infographic-like. It can lift the app's real components (cards, charts, buttons, terminal output) and animate them punchily. It does not have to keep the app's original look. A product piece for clients and an explainer for devs will look different.
