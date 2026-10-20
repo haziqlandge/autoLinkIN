@@ -1,6 +1,6 @@
 # autoLinkIN
 
-A Claude Code plugin that turns work you actually shipped into LinkedIn drafts you review before anything goes out.
+An Agentic Code plugin that turns work you actually shipped into LinkedIn drafts, you review before anything goes out.
 
 ## What it does
 
